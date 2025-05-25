@@ -1,0 +1,49 @@
+# Ultralytics YOLO 🚀, AGPL-3.0 license
+# YOLO11 object detection model with MobileViT backbone, BiFPN, and BiLevelRoutingAttention
+# For Usage examples see https://docs.ultralytics.com/tasks/detect
+
+# Parameters
+nc: 1 # number of classes (will be overridden by dataset yaml)
+scales: # model compound scaling constants
+  # [depth, width, max_channels]
+  n: [0.50, 0.25, 1024] # summary: lightweight version
+  s: [0.50, 0.50, 1024] # summary: small version
+  m: [0.50, 1.00, 512]  # summary: medium version
+  l: [1.00, 1.00, 512]  # summary: large version
+  x: [1.00, 1.50, 512]  # summary: extra large version
+
+# Backbone with MobileViT blocks integrated
+backbone:
+  # [from, repeats, module, args]
+  - [-1, 1, Conv, [64, 3, 2]]  # 0-P1/2
+  - [-1, 1, Conv, [128, 3, 2]] # 1-P2/4
+  - [-1, 2, MobileViTBlock, [256]] # 2-MobileViT block
+  - [-1, 1, Conv, [256, 3, 2]] # 3-P3/8
+  - [-1, 2, MobileViTBlock, [512]] # 4-MobileViT block
+  - [-1, 1, Conv, [512, 3, 2]] # 5-P4/16
+  - [-1, 2, MobileViTBlock, [512]] # 6-MobileViT block
+  - [-1, 1, Conv, [1024, 3, 2]] # 7-P5/32
+  - [-1, 2, MobileViTBlock, [1024]] # 8-MobileViT block
+  - [-1, 1, SPPF, [1024, 5]] # 9
+  - [-1, 2, C2PSA, [1024]] # 10
+
+# YOLO11 head with BiFPN and BRA
+head:
+  - [-1, 1, nn.Upsample, [None, 2, "nearest"]] # 11
+  - [[-1, 6], 1, BiFPN_Concat, [1]] # 12-cat backbone P4 with BiFPN
+  - [-1, 2, C3k2, [512, False]] # 13
+
+  - [-1, 1, nn.Upsample, [None, 2, "nearest"]] # 14
+  - [[-1, 4], 1, BiFPN_Concat, [1]] # 15-cat backbone P3 with BiFPN  
+  - [-1, 2, MobileViTBlock, [256]] # 16 (P3/8-small)
+
+  - [-1, 1, Conv, [256, 3, 2]] # 17
+  - [-1, 1, BiLevelRoutingAttention, [8]] # 18-Apply BRA attention
+  - [[-1, 13], 1, BiFPN_Concat, [1]] # 19-cat head P4 with BiFPN
+  - [-1, 2, MobileViTBlock, [512]] # 20 (P4/16-medium)
+
+  - [-1, 1, Conv, [512, 3, 2]] # 21
+  - [[-1, 10], 1, BiFPN_Concat, [1]] # 22-cat head P5 with BiFPN
+  - [-1, 2, MobileViTBlock, [1024]] # 23 (P5/32-large)
+
+  - [[16, 20, 23], 1, Detect, [nc]] # 24-Detect(P3, P4, P5) 

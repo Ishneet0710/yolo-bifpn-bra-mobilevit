@@ -1,0 +1,13 @@
+train: ../trainfinal/images
+val: ../validfinal/images
+test: ../testfinal/images
+
+nc: 1
+names: ['waste']
+
+roboflow:
+  workspace: ihih
+  project: taco-object-detection-kcxyn-fgglt
+  version: 2
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/ihih/taco-object-detection-kcxyn-fgglt/dataset/2
