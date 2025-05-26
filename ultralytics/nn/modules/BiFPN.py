@@ -1,4 +1,3 @@
-
 import math
 import warnings
 
@@ -62,6 +61,27 @@ class BiFPN_Concat(nn.Module):
 
         # Chuẩn hóa trọng số
         weight = w / (torch.sum(w, dim=0) + self.epsilon)
+
+        # Handle dimension mismatches by resizing to the largest spatial dimensions
+        if len(x) > 1:
+            # Find the maximum spatial dimensions
+            max_h = max(tensor.shape[2] for tensor in x)
+            max_w = max(tensor.shape[3] for tensor in x)
+            
+            # Resize all tensors to match the maximum dimensions
+            resized_x = []
+            for i, tensor in enumerate(x):
+                if tensor.shape[2] != max_h or tensor.shape[3] != max_w:
+                    resized_tensor = F.interpolate(
+                        tensor, 
+                        size=(max_h, max_w), 
+                        mode='bilinear', 
+                        align_corners=False
+                    )
+                    resized_x.append(resized_tensor)
+                else:
+                    resized_x.append(tensor)
+            x = resized_x
 
         # Áp dụng trọng số và concatenate
         weighted_features = [weight[i] * x[i] for i in range(self.num_inputs)]

@@ -340,4 +340,25 @@ class Concat(nn.Module):
 
     def forward(self, x):
         """Forward pass for the YOLOv8 mask Proto module."""
+        # Handle dimension mismatches by resizing to the largest spatial dimensions
+        if len(x) > 1:
+            # Find the maximum spatial dimensions
+            max_h = max(tensor.shape[2] for tensor in x)
+            max_w = max(tensor.shape[3] for tensor in x)
+            
+            # Resize all tensors to match the maximum dimensions
+            resized_x = []
+            for tensor in x:
+                if tensor.shape[2] != max_h or tensor.shape[3] != max_w:
+                    resized_tensor = torch.nn.functional.interpolate(
+                        tensor, 
+                        size=(max_h, max_w), 
+                        mode='bilinear', 
+                        align_corners=False
+                    )
+                    resized_x.append(resized_tensor)
+                else:
+                    resized_x.append(tensor)
+            x = resized_x
+            
         return torch.cat(x, self.d)
