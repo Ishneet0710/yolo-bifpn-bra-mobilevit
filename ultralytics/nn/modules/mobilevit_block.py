@@ -74,8 +74,21 @@ class MobileViTBlock(nn.Module):
         # Apply MobileViT block
         out = self.mobilevit(x_adjusted)
         
-        # Apply shortcut connection if enabled
+        # Apply shortcut connection if enabled and dimensions match
         if self.shortcut:
-            out = out + x_adjusted
+            # Check if dimensions match before applying shortcut
+            if out.shape == x_adjusted.shape:
+                out = out + x_adjusted
+            else:
+                # If dimensions don't match due to spatial resizing in MobileViT,
+                # resize x_adjusted to match the output dimensions
+                if out.shape[2:] != x_adjusted.shape[2:]:
+                    x_adjusted = torch.nn.functional.interpolate(
+                        x_adjusted, 
+                        size=out.shape[2:], 
+                        mode='bilinear', 
+                        align_corners=False
+                    )
+                out = out + x_adjusted
             
         return out 
